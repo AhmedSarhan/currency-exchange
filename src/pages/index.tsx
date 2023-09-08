@@ -1,34 +1,21 @@
 import styles from "@/styles/Home.module.scss";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Head from "next/head";
 import { QueryClient, dehydrate } from "@tanstack/react-query";
 import { FloatInput } from "@/shared/components/float-input";
 import {
   fetchCurrencies,
-  useExchangeResult,
+  useConvertResult,
   useFetchCurrencies,
 } from "@/modules/exchange/hooks/server";
-
+import { useDebounce } from "@/shared/hooks/use-debounce";
+import { Option, Select } from "@/shared/components/select";
+import { GoArrowSwitch } from "react-icons/go";
+import { ExchangeProvider } from "@/modules/exchange/provider";
+import { ExchangeForm } from "@/modules/exchange/components/form";
+import { ExchangeResult } from "@/modules/exchange/components/result";
 export default function Home() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [amount, setAmount] = useState<string>("1.0");
-
-  const { data: currencies } = useFetchCurrencies();
-
-  const {
-    isLoading,
-    isInitialLoading,
-    data: result,
-    error,
-  } = useExchangeResult({ from, to, amount });
-
-  const resetHandler = () => {
-    setFrom("");
-    setTo("");
-    setAmount("1.0");
-  };
   return (
     <>
       <Head>
@@ -38,77 +25,10 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.container}>
-        <div className={styles.form}>
-          <div className={styles.form_group}>
-            <label htmlFor="amount">Amount</label>
-            <FloatInput
-              value={String(amount)}
-              onChange={(value) =>
-                setAmount(parseFloat(value) ? String(parseFloat(value)) : "0.0")
-              }
-            />
-          </div>
-
-          <div className={styles.form_group}>
-            <label htmlFor="from">From</label>
-            <select
-              id="from"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              placeholder="currency"
-            >
-              <option value="">currency</option>
-              {currencies?.map((currency) => (
-                <option
-                  key={currency}
-                  value={currency}
-                  disabled={currency === to}
-                >
-                  {currency}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={() => {
-              const temp = from;
-              setFrom(to);
-              setTo(temp);
-            }}
-          >
-            reverse
-          </button>
-          <div className={styles.form_group}>
-            <label htmlFor="from">From</label>
-            <select
-              id="to"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="Select currency"
-            >
-              <option value="">currency</option>
-              {currencies?.map((currency) => (
-                <option
-                  key={currency}
-                  value={currency}
-                  disabled={currency === from}
-                >
-                  {currency}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {isInitialLoading && <p>Loading...</p>}
-        {!!result && (
-          <div className={styles.result_container}>
-            <button onClick={resetHandler}>Reset</button>
-            <p>
-              {amount} {from} is equal to {result} {to}
-            </p>
-          </div>
-        )}
+        <ExchangeProvider>
+          <ExchangeForm />
+          <ExchangeResult />
+        </ExchangeProvider>
       </main>
     </>
   );
@@ -116,7 +36,6 @@ export default function Home() {
 
 export const getServerSideProps = async () => {
   const queryClient = new QueryClient();
-
   await queryClient.prefetchQuery(["currencies"], fetchCurrencies);
 
   return {

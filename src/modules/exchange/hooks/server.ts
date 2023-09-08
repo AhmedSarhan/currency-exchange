@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { API } from "@/shared/api/axios";
+import { API_V2 } from "@/shared/api/axios";
+import { filterCommonCurrencies } from "../utils/filter-common-currencies";
+import { Currency } from "../utils/types";
 
 export const fetchCurrencies = async () => {
-  const { data } = await API.get("/listquotes");
-  return data as string[];
+  const { data } = await API_V2.get("/symbols");
+  const symbols = data.symbols as Record<string, Currency>;
+
+  const currencies = filterCommonCurrencies(symbols).map((key) => ({
+    value: key,
+    label: key.code,
+  }));
+  return currencies;
 };
 
 export const useFetchCurrencies = () => {
@@ -13,7 +21,7 @@ export const useFetchCurrencies = () => {
   });
 };
 
-export const exchangeCurrency = async ({
+export const convertCurrency = async ({
   from,
   to,
   amount,
@@ -25,14 +33,14 @@ export const exchangeCurrency = async ({
   const params = {
     from,
     to,
-    q: amount,
+    amount,
   };
-  const response = await API.get("/exchange", { params });
-  return response.data as number;
+  const response = await API_V2.get("/convert", { params });
+  return response.data;
   // console.log("response", response.data);
 };
 
-export const useExchangeResult = ({
+export const useConvertResult = ({
   from,
   to,
   amount,
@@ -41,18 +49,10 @@ export const useExchangeResult = ({
   to: string;
   amount: string;
 }) => {
-  console.log(
-    "useExchangeResult",
-    from,
-    to,
-    amount,
-
-    !!from && !!to && !!Number(amount) && !isNaN(Number(amount))
-  );
-
   return useQuery({
     queryKey: ["exchange", from, to, amount],
-    queryFn: () => exchangeCurrency({ from, to, amount }),
+    queryFn: () => convertCurrency({ from, to, amount }),
     enabled: !!from && !!to && !!Number(amount) && !isNaN(Number(amount)),
+    select: (data) => data?.result as number,
   });
 };

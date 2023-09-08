@@ -13,3 +13,9 @@ console.log('options', options);
 
 
 export const API = axios.create(options);
+
+
+
+export const API_V2 = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL_V2,
+})
